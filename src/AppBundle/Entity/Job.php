@@ -29,13 +29,11 @@ class Job
     /**
      * @var string
      *
-     * @ORM\Column(name="job_title", type="string", length=150, nullable=false)
+     * @ORM\Column(name="job_title", type="string", length=50, nullable=false)
      *
      * @Assert\Length(
      *      min = 5,
      *      max = 50,
-     *      minMessage = "The title must be at least {{ limit }} characters long",
-     *      maxMessage = "The title cannot be longer than {{ limit }} characters"
      * )
      */
     private $title;

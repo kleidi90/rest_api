@@ -37,46 +37,22 @@ class DefaultController extends FOSRestController
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function postJobAction(Request $request) {
-        $expdate  = new \DateTime;
+
+        $result = new Result();
+        $job = new Job();
+        $data = json_decode($request->getContent(),true);
 
         try {
-            $result = new Result();
-            $job = new Job();
-            $data = json_decode($request->getContent(),true);
 
             //Make a general check if all the fields are populated
-            if (!$data['title'] or !$data['description'] or !$data['city'] or !$data['serviceid'] or !$data['zipcode']){
-                throw $this->createNotFoundException('Some data is missing ');
-            }
+            if ($this->checkData($data)){
+                //Call the service if it exists
+                $this->getService($data['serviceid']);
 
-            //Find the service in the database
-            $repo = $this->getDoctrine()->getRepository('AppBundle:Service');
-            $service = $repo->find($data['serviceid']);
-
-            //Check if the service enetered exists on the Services table
-            if(!$service){
-                throw $this->createNotFoundException('The service enetered is not valid!');
-            }
-
-            //Check if the title is between 5 and 50 characters
-            if (strlen($data['title'])< 5 or strlen($data['title']) > 50){
-                throw $this->createNotFoundException('The title should be between 5 and 50 characters: ' . $data['title']);
             }
 
             //Check if the date is ok and the format is correct
-            if(!$data['executiondate']){
-                throw $this->createNotFoundException('You should enter a date.');
-            } else {
-                //Set the format I want the date
-                $format = 'Y-m-d';
-                $d = $expdate->createFromFormat($format, $data['executiondate']);
-                //Transfrom the date in the correct format
-                $date_final = $d->format($format);
-
-                if (!$d or $date_final != $data['executiondate']){
-                    throw $this->createNotFoundException('This date is not correct: ' . $data['executiondate']);
-                }
-            }
+            $formatedDate = $this->checkDateFormat($data['executiondate']);
 
             //Check if the zipcode is a valid German zipcode
             if ( !(preg_match('/^\d{5}$/', $data['zipcode']) && (int) $data['zipcode'] > 1000 && (int) $data['zipcode'] < 99999) ) {
@@ -88,7 +64,7 @@ class DefaultController extends FOSRestController
             //Prepare the object for the insertion
             $job->setTitle($data['title']);
             $job->setDescription($data['description']);
-            $job->setExecutionDate($d);
+            $job->setExecutionDate($formatedDate);
             $job->setCity($data['city']);
             $job->setServiceId($data['serviceid']);
             $job->setZipcode($data['zipcode']);
@@ -146,6 +122,55 @@ class DefaultController extends FOSRestController
     }
 
 
+
+    public function checkData(array $data){
+        foreach($data as $key => $item) {
+            if ($item == null){
+                throw $this->createNotFoundException(ucfirst($key).' can\'t be empty!');
+            }else{
+
+//                if(strlen($data['title'])< 5 or strlen($data['title']) > 50){
+//                    throw $this->createNotFoundException('The title should be between 5 and 50 characters: ' . $data['title']);
+//
+//                }
+            }
+
+        }
+
+    }
+
+
+    public function checkDateFormat($executiondate){
+
+        $date  = new \DateTime;
+        //Set the format I want the date
+        $format = 'Y-m-d';
+        $formatedDate = $date->createFromFormat($format, $executiondate);
+        //Transfrom the date in the correct format
+        $date_final = $formatedDate->format($format);
+
+        if (!$formatedDate or $date_final != $executiondate){
+            throw $this->createNotFoundException('This date is not correct: ' . $executiondate);
+        }
+
+        return $formatedDate;
+
+    }
+
+    public function getService ($serviceid){
+
+            //Find the service in the database
+            $repo = $this->getDoctrine()->getRepository('AppBundle:Service');
+            $service = $repo->find($serviceid);
+
+            //Check if the service enetered exists on the Services table
+            if($service){
+                return $service;
+            }else{
+                throw $this->createNotFoundException('The service enetered is not valid!');
+            }
+
+        }
 
 
 }
